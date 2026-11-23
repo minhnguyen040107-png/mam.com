@@ -1,0 +1,85 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid == "r4cf6Cm9IJQC2GxrqkMN0lX9eGj2";
+    }
+
+    // ĐƠN HÀNG
+    match /orders/{orderId} {
+
+      // Khách chỉ được tạo đơn hàng
+      // Chủ cửa hàng mới được xem đơn hàng
+      allow read: if isAdmin();
+
+      allow create: if
+        request.resource.data.keys().hasAll([
+          "customerName",
+          "phone",
+          "address",
+          "items",
+          "total",
+          "status",
+          "createdAt"
+        ])
+        &&
+        request.resource.data.keys().hasOnly([
+          "customerName",
+          "phone",
+          "address",
+          "items",
+          "total",
+          "status",
+          "createdAt"
+        ])
+        &&
+        request.resource.data.customerName is string
+        &&
+        request.resource.data.customerName.size() > 0
+        &&
+        request.resource.data.customerName.size() <= 100
+        &&
+        request.resource.data.phone is string
+        &&
+        request.resource.data.phone.size() >= 9
+        &&
+        request.resource.data.phone.size() <= 20
+        &&
+        request.resource.data.address is string
+        &&
+        request.resource.data.address.size() > 0
+        &&
+        request.resource.data.address.size() <= 500
+        &&
+        request.resource.data.items is list
+        &&
+        request.resource.data.items.size() >= 1
+        &&
+        request.resource.data.items.size() <= 20
+        &&
+        request.resource.data.total is number
+        &&
+        request.resource.data.total >= 0
+        &&
+        request.resource.data.status == "Chờ xác nhận"
+        &&
+        request.resource.data.createdAt == request.time;
+
+      // Chỉ Admin được cập nhật đơn hàng
+      allow update: if isAdmin();
+
+      // Không cho xóa đơn hàng
+      allow delete: if false;
+    }
+
+    // SẢN PHẨM
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
